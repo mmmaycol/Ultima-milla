@@ -47,7 +47,7 @@ export class TrackingController {
    * El repartidor confirma que tomó el paquete físicamente.
    */
   @Post('recogio-pedido')
-  async recogioP edido(@Body() body: { repartidor_id: string; pedido_id: string }) {
+  async recigioPedido(@Body() body: { repartidor_id: string; pedido_id: string }) {
     await this.trackingService.repartidorRecogioPedido(body.repartidor_id, body.pedido_id);
     return { ok: true };
   }

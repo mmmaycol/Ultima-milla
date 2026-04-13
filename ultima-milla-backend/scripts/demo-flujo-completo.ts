@@ -10,7 +10,7 @@
  * Asegurarse de que el servidor esté corriendo en localhost:3000
  */
 
-const BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = 'http://localhost:3001/api';
 
 async function post(path: string, body: any) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -23,7 +23,11 @@ async function post(path: string, body: any) {
 
 async function get(path: string) {
   const res = await fetch(`${BASE_URL}${path}`);
-  return res.json();
+  if (res.status === 204 || res.headers.get('content-length') === '0') {
+    return null;
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 function esperar(ms: number) {
@@ -99,17 +103,28 @@ async function main() {
   console.log('  🎯 Matching: correlación AND COMPLETA (pago ✓ + restaurante ✓)');
   console.log('  🏍️  Ejecutando algoritmo de selección de repartidor...');
 
-  await esperar(1500);
+  await esperar(3000); // Esperar más tiempo para que Kafka procese
 
   // ── FASE 2: ASIGNACIÓN Y TRACKING ───────────────────────────
 
   log('🏍️  FASE 2 - Repartidor asignado');
-  const asignacion = await get(`/matching/asignacion/${pedido_id}`);
-  if (asignacion) {
+  let asignacion = null;
+  let intentos = 0;
+  while (!asignacion && intentos < 10) {
+    asignacion = await get(`/matching/asignacion/${pedido_id}`);
+    if (!asignacion || asignacion.error) {
+      await esperar(1000);
+      intentos++;
+    }
+  }
+  if (asignacion && !asignacion.error) {
     console.log(`  Repartidor: ${asignacion.repartidor_nombre}`);
     console.log(`  Calificación: ⭐ ${asignacion.repartidor_calificacion}`);
     console.log(`  ETA estimado: ${asignacion.eta_minutos} minutos`);
     console.log(`  Distancia al restaurante: ${asignacion.distancia_km} km`);
+  } else {
+    console.log('  ⚠️  Asignación no encontrada (posible delay en Kafka)');
+    asignacion = { repartidor_id: 'rep_001' }; // Fallback para demo
   }
   console.log('  📤 Evento → repartidor.asignado');
   console.log('  📬 Notificación push → cliente con nombre y ETA del repartidor');

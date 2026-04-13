@@ -17,6 +17,7 @@ export class MatchingController {
 
   @Get('asignacion/:pedidoId')
   obtenerAsignacion(@Param('pedidoId') pedidoId: string) {
-    return this.matchingService.obtenerAsignacion(pedidoId);
+    const asignacion = this.matchingService.obtenerAsignacion(pedidoId);
+    return asignacion || { error: 'Asignación no encontrada' };
   }
 }
